@@ -1,0 +1,437 @@
+---
+title: "Codigo"
+author: "Rosana Cardona"
+date: "2024-07-03"
+output: pdf_document
+---
+
+# librerias necesarias
+```{r include=FALSE}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(xts)
+library(dynlm)
+library(urca)
+library(vars)
+library(AICcmodavg)
+library(lmtest)
+library(purrr)
+library(psych)
+```
+
+# Carga de base de datos y modificaciones 
+```{r include=FALSE}
+M2 <- read_excel("M2.xlsx", skip = 2)
+IPC <- read_excel("IPC.xlsx", skip = 2)
+PIB <- read_excel("PIB.xlsx", skip = 2)
+TCN <- read_excel("TCN.xlsx", skip = 2)
+TPM <- read_excel("TPM.xlsx", skip = 2)
+
+# cambio nombre columnas
+colnames(M2) <- c("Periodo", "M2")
+colnames(IPC) <- c("Periodo", "IPC")
+colnames(PIB) <- c("Periodo", "PIB")
+colnames(TCN) <- c("Periodo", "TCN")
+colnames(TPM) <- c("Periodo", "TPM")
+
+# formato de fecha
+M2$Periodo <- as.Date(M2$Periodo, format = "%Y-%m-%d")
+IPC$Periodo <- as.Date(IPC$Periodo, format = "%Y-%m-%d")
+PIB$Periodo <- as.Date(PIB$Periodo, format = "%Y-%m-%d")
+TPM$Periodo <- as.Date(TPM$Periodo, format = "%Y-%m-%d")
+TCN$Periodo <- as.Date(TCN$Periodo, format = "%Y-%m-%d")
+
+# IPC mensual a trimestral 
+xts_ipc <- xts(IPC$IPC, order.by = IPC$Periodo)
+xts_ipc_trimestral <- apply.quarterly(xts_ipc, mean)
+IPC <- data.frame(
+  Periodo = index(xts_ipc_trimestral),
+  IPC = coredata(xts_ipc_trimestral))
+
+```
+
+# Estadistica descriptiva
+```{r}
+base <- reduce(list(M2, IPC, PIB, TCN, TPM), function(x, y) merge(x, y, by = "Periodo", all = TRUE))
+
+descriptiva <- describe(base)
+descriptiva <- descriptiva[-1, c("mean", "sd", "median", "min", "max")]
+print(descriptiva)
+```
+
+# Convertir a series de tiempo
+```{r}
+inicio <- c(1996, 1)
+frec <- 4  # Trimestral
+
+M2_ts <- ts(M2$M2, start = inicio, frequency = frec)
+IPC_ts <- ts(IPC$IPC, start = inicio, frequency = frec)
+PIB_ts <- ts(PIB$PIB, start = inicio, frequency = frec)
+TCN_ts <- ts(TCN$TCN, start = inicio, frequency = frec)
+TPM_ts <- ts(TPM$TPM, start = inicio, frequency = frec)
+```
+
+# log y diff log de las variables
+```{r}
+#log
+lM2_ts <- log(M2_ts)
+lIPC_ts <- log(IPC_ts + abs(min(IPC_ts)) + 1)
+lPIB_ts <- log(PIB_ts)
+lTCN_ts <- log(TCN_ts)
+lTPM_ts <- log(TPM_ts)
+
+# diff log
+dM2_ts <- diff(lM2_ts, differences = 1)
+dIPC_ts <- diff(lIPC_ts, differences = 1)
+dPIB_ts <- diff(lPIB_ts, differences = 1)
+dTCN_ts <- diff(lTCN_ts, differences = 1)
+dTPM_ts <- diff(lTPM_ts, differences = 1)
+```
+
+# Tendencia
+```{r}
+tM2_ts <- time(lM2_ts)
+tIPC_ts <- time(lIPC_ts)
+tPIB_ts <- time(lPIB_ts)
+tTCN_ts <- time(lTCN_ts)
+tTPM_ts <- time(lTPM_ts)
+
+#Modelo Tendencia
+mtM2_ts <- lm(lM2_ts ~ tM2_ts)
+mtIPC_ts <- lm(lIPC_ts ~ tIPC_ts)
+mtPIB_ts <- lm(lPIB_ts ~ tPIB_ts)
+mtTCN_ts <- lm(lTCN_ts ~ tTCN_ts)
+mtTPM_ts <- lm(lTPM_ts ~ tTPM_ts)
+
+print(mtM2_ts)
+print(mtIPC_ts)
+print(mtPIB_ts)
+print(mtTCN_ts)
+print(mtTPM_ts)
+```
+
+# Prueba de raiz unitaria
+```{r}
+ #serie logaritmica
+M2_ur <- ur.df(lM2_ts, type = c("trend"), selectlags = "AIC")
+IPC_ur <- ur.df(lIPC_ts, type = "trend", selectlags = "AIC")
+PIB_ur <- ur.df(lPIB_ts, type = c("trend"), selectlags = "AIC")
+TCN_ur <- ur.df(lTCN_ts, type = c("trend"), selectlags = "AIC")
+TPM_ur <- ur.df(lTPM_ts, type = c("trend"), selectlags = "AIC")
+
+#diferencia logaritmica 
+M2_ur2 <- ur.df(dM2_ts, type = c("none"), selectlags = "AIC")
+IPC_ur2 <- ur.df(dIPC_ts, type = "none", selectlags = "AIC")
+PIB_ur2 <- ur.df(dPIB_ts, type = c("none"), selectlags = "AIC")
+TCN_ur2 <- ur.df(dTCN_ts, type = "none", selectlags = "AIC")
+TPM_ur2 <- ur.df(dTPM_ts, type = "none", selectlags = "AIC")
+
+print(M2_ur)
+print(IPC_ur)
+print(PIB_ur)
+print(TCN_ur)
+print(TPM_ur)
+
+print(M2_ur2)
+print(IPC_ur2)
+print(PIB_ur2)
+print(TCN_ur2)
+print(TPM_ur2)
+```
+
+# funciones de autocorrelación 
+```{r}
+#logaritmo.
+acf_M2 <- acf(lM2_ts, plot = FALSE)
+acf_IPC <- acf(lIPC_ts, plot = FALSE)
+acf_PIB <- acf(lPIB_ts, plot = FALSE)
+acf_TCN <- acf(lTCN_ts, plot = FALSE)
+acf_TPM <- acf(lTPM_ts, plot = FALSE)
+
+#diferencia de logaritmo
+acf_diffM2 <- acf(dM2_ts, plot = FALSE)
+acf_diffIPC <- acf(dIPC_ts, plot = FALSE)
+acf_diffPIB <- acf(dPIB_ts, plot = FALSE)
+acf_diffTCN <- acf(dTCN_ts, plot = FALSE)
+acf_diffTPM <- acf(dTPM_ts, plot = FALSE)
+```
+
+# Dataframes para las Series Temporales y las Funciones de Autocorrelación (Se crean los data.frame para generar gráfico)
+```{r}
+# Dataframes de logaritmos para ver gráficos de estacionariedad
+m2_df <- data.frame(Periodo = time(lM2_ts), Valor = lM2_ts, Variable = "Oferta Monetaria M2")
+ipc_df <- data.frame(Periodo = time(lIPC_ts), Valor = lIPC_ts, Variable = "IPC")
+pib_df <- data.frame(Periodo = time(lPIB_ts), Valor = lPIB_ts, Variable = "PIB")
+tcn_df <- data.frame(Periodo = time(lTCN_ts), Valor = lTCN_ts, Variable = "Tipo de Cambio Nominal")
+tpm_df <- data.frame(Periodo = time(lTPM_ts), Valor = lTPM_ts, Variable = "Tasa de Política Monetaria")
+
+# Dataframes de diferencia de logaritmos para ver gráficos de estacionariedad
+diffm2_df <- data.frame(Periodo = time(dM2_ts), Valor = dM2_ts, Variable = "Oferta Monetaria M2")
+diffipc_df <- data.frame(Periodo = time(dIPC_ts), Valor = dIPC_ts, Variable = "IPC")
+diffpib_df <- data.frame(Periodo = time(dPIB_ts), Valor = dPIB_ts, Variable = "PIB")
+difftcn_df <- data.frame(Periodo = time(dTCN_ts), Valor = dTCN_ts, Variable = "Tipo de Cambio Nominal")
+difftpm_df <- data.frame(Periodo = time(dTPM_ts), Valor = dTPM_ts, Variable = "Tasa de Política Monetaria")
+
+# Dataframes de logaritmos para ver gráficos de correlación
+acf_df_M2 <- data.frame(Lag = acf_M2$lag, ACF = acf_M2$acf, Variable = "M2")
+acf_df_IPC <- data.frame(Lag = acf_IPC$lag, ACF = acf_IPC$acf, Variable = "IPC")
+acf_df_PIB <- data.frame(Lag = acf_PIB$lag, ACF = acf_PIB$acf, Variable = "PIB")
+acf_df_TCN <- data.frame(Lag = acf_TCN$lag, ACF = acf_TCN$acf, Variable = "TCN")
+acf_df_TPM <- data.frame(Lag = acf_TPM$lag, ACF = acf_TPM$acf, Variable = "TPM")
+
+# Dataframes de diferencia de logaritmos para ver gráficos de correlación
+acf_diff_M2 <- data.frame(Lag = acf_diffM2$lag, ACF = acf_diffM2$acf, Variable = "M2")
+acf_diff_IPC <- data.frame(Lag = acf_diffIPC$lag, ACF = acf_diffIPC$acf, Variable = "IPC")
+acf_diff_PIB <- data.frame(Lag = acf_diffPIB$lag, ACF = acf_diffPIB$acf, Variable = "PIB")
+acf_diff_TCN <- data.frame(Lag = acf_diffTCN$lag, ACF = acf_diffTCN$acf, Variable = "TCN")
+acf_diff_TPM <- data.frame(Lag = acf_diffTPM$lag, ACF = acf_diffTPM$acf, Variable = "TPM")
+
+# Generar un solo data frames. Esto se realiza para que al momento de graficar sea amigable observar
+combined_df <- bind_rows(m2_df, ipc_df, pib_df, tcn_df, tpm_df)
+combined_diff <- bind_rows(diffm2_df, diffipc_df, diffpib_df, difftcn_df, difftpm_df)
+acf_combined_df <- bind_rows(acf_df_M2, acf_df_IPC, acf_df_PIB, acf_df_TCN, acf_df_TPM)
+acf_combined_diff <- bind_rows(acf_diff_M2, acf_diff_IPC, acf_diff_PIB, acf_diff_TCN, acf_diff_TPM)
+```
+
+# Graficos
+```{r}
+# Gráfica con logaritmos estacionariedad
+ggplot(combined_df, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Logaritmo)") +
+  theme_minimal()
+
+# Gráfico: ACF de las series logarítmicas
+ggplot(acf_combined_df, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Series Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Gráfica con diferencia de logaritmos estacionariedad
+ggplot(combined_diff, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Diferencias Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Diff Logaritmo)") +
+  theme_minimal()
+
+# Gráfico: ACF de las series logarítmicas diferenciadas
+ggplot(acf_combined_diff, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Diferencias Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+# Creación de variables Dummy 
+```{r}
+#Variables Dummy para Evaluar Eventos
+fun_dummy <- function(data, years) {
+  for (year in years) {
+    dummy_var <- paste0("dummy_", year)
+    data[[dummy_var]] <- ifelse(format(data$Periodo, "%Y") == as.character(year), 1, 0)
+  }
+  return(data)
+}
+
+M2 <- fun_dummy(M2, c(2008, 2010, 2020))
+IPC <- fun_dummy(IPC, c(2008, 2010, 2020))
+PIB <- fun_dummy(PIB, c(2008, 2010, 2020))
+TPM <- fun_dummy(TPM, c(2008, 2010, 2020))
+TCN <- fun_dummy(TCN, c(2008, 2010, 2020))
+
+# Convertir las dummies a series de tiempo
+dummy_2008_ts <- ts(M2$dummy_2008, start = inicio, frequency = frec)
+dummy_2010_ts <- ts(M2$dummy_2010, start = inicio, frequency = frec)
+dummy_2020_ts <- ts(M2$dummy_2020, start = inicio, frequency = frec)
+
+
+#Variables Dummy Estacionales 
+# Creación de variables dummy para los trimestres en cada dataset
+crear_dummies_estacionales <- function(data) {
+  data$Quarter <- quarters(data$Periodo)
+  data$dummy_Q1 <- ifelse(data$Quarter == "Q1", 1, 0)
+  data$dummy_Q2 <- ifelse(data$Quarter == "Q2", 1, 0)
+  data$dummy_Q3 <- ifelse(data$Quarter == "Q3", 1, 0)
+  return(data)
+}
+
+M2 <- crear_dummies_estacionales(M2)
+IPC <- crear_dummies_estacionales(IPC)
+PIB <- crear_dummies_estacionales(PIB)
+TPM <- crear_dummies_estacionales(TPM)
+TCN <- crear_dummies_estacionales(TCN)
+
+# Convertir las dummies a series de tiempo
+dummy_Q1_ts <- ts(M2$dummy_Q1, start = inicio, frequency = frec)
+dummy_Q2_ts <- ts(M2$dummy_Q2, start = inicio, frequency = frec)
+dummy_Q3_ts <- ts(M2$dummy_Q3, start = inicio, frequency = frec)
+```
+
+# Modelo ARD
+```{r}
+res <- data.frame(Lag = integer(), AIC = numeric(), BIC = numeric())
+
+for (lag in 1:10) {
+  formula <- as.formula(paste("dM2_ts ~ L(dM2_ts, 1:", lag, ") + dIPC_ts + dPIB_ts + dTCN_ts + dTPM_ts + dummy_2008_ts + dummy_2010_ts + dummy_2020_ts + dummy_Q1_ts + dummy_Q2_ts + dummy_Q3_ts", sep = ""))
+  model <- dynlm(formula)
+  
+  aic_value <- AIC(model)
+  bic_value <- BIC(model)
+  
+  res <- rbind(res, data.frame(Lag = lag, AIC = aic_value, BIC = bic_value))
+}
+
+print(res)
+
+```
+
+# Ajustar el modelo ARD con el número óptimo de rezagos
+```{r}
+mejor <- res[which.min(res$AIC), "Lag"]
+opt <- mejor  
+form_opt <- as.formula(paste("dM2_ts ~ L(dM2_ts, 1:", opt, ") + dIPC_ts + dPIB_ts + dTCN_ts + dTPM_ts + dummy_2008_ts + dummy_2010_ts + dummy_2020_ts + dummy_Q1_ts + dummy_Q2_ts + dummy_Q3_ts", sep = ""))
+ard_mod_opt <- dynlm(form_opt)
+
+summary(ard_mod_opt)
+```
+
+# Verificar significancia de las dummies estacionales
+```{r}
+coefficients <- summary(ard_mod_opt)$coefficients
+dummy_vars <- coefficients[grep("dummy_Q", rownames(coefficients)), ]
+print(dummy_vars)
+```
+
+# Pruebas de diagnostico
+```{r}
+dw_test <- dwtest(ard_mod_opt)
+print(dw_test)
+
+bp_test <- bptest(ard_mod_opt)
+print(bp_test)
+```
+
+# Modelo VAR con Variables Exógenas
+```{r}
+# Crear dataframe con variables exógenas
+exogen_vars <- data.frame(
+  dummy_2008 = as.numeric(dummy_2008_ts),
+  dummy_2010 = as.numeric(dummy_2010_ts),
+  dummy_2020 = as.numeric(dummy_2020_ts),
+  dummy_Q1 = as.numeric(dummy_Q1_ts),
+  dummy_Q2 = as.numeric(dummy_Q2_ts),
+  dummy_Q3 = as.numeric(dummy_Q3_ts)
+)
+
+# Crear base de datos para el modelo VAR
+base_com <- data.frame(
+  dM2 = as.numeric(dM2_ts),
+  dIPC = as.numeric(dIPC_ts),
+  dPIB = as.numeric(dPIB_ts),
+  dTCN = as.numeric(dTCN_ts),
+  dTPM = as.numeric(dTPM_ts)
+)
+
+# Asegurar que todas las series tengan el mismo número de filas
+min_length <- min(nrow(base_com), nrow(exogen_vars))
+base_com <- base_com[1:min_length, ]
+exogen_vars <- exogen_vars[1:min_length, ]
+```
+
+# Seleccionar el número óptimo de rezagos
+```{r}
+sel_lag <- VARselect(base_com, lag.max = 10, type = "const", exogen = exogen_vars)
+opt <- sel_lag$selection["AIC(n)"]
+print(opt)
+```
+
+# Ajustar el modelo VAR con variables exógenas
+```{r}
+var_model <- VAR(base_com, p = opt, type = "const", exogen = exogen_vars)
+summary(var_model)
+```
+
+# Evaluación de Causalidad de Granger
+```{r}
+names(var_model$varresult)
+
+# Evaluación de Causalidad de Granger
+test_granger_dM2_IPC <- causality(var_model, cause = "dIPC")
+test_granger_dM2_PIB <- causality(var_model, cause = "dPIB")
+test_granger_dM2_TCN <- causality(var_model, cause = "dTCN")
+test_granger_dM2_TPM <- causality(var_model, cause = "dTPM")
+
+#resultados de las pruebas de causalidad
+print(test_granger_dM2_IPC)
+print(test_granger_dM2_PIB)
+print(test_granger_dM2_TCN)
+print(test_granger_dM2_TPM)
+```
+
+# Función impulso respuesta
+```{r}
+# Crear los objetos de IRF
+irf_M2 <- irf(var_model, impulse = "dM2", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_IPC <- irf(var_model, impulse = "dIPC", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_PIB <- irf(var_model, impulse = "dPIB", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_TCN <- irf(var_model, impulse = "dTCN", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_TPM <- irf(var_model, impulse = "dTPM", response = "dM2", n.ahead = 12, ortho = TRUE)
+
+plot(irf_M2)
+plot(irf_IPC)
+plot(irf_PIB)
+plot(irf_TCN)
+plot(irf_TPM)
+```
+
+# Descomponer la varianza
+```{r}
+# Ajustar el modelo VAR
+var_model <- VAR(base_com, p = opt, type = "const", exogen = exogen_vars)
+
+# Descomposición de la varianza
+fevd_results <- fevd(var_model, n.ahead = 12)
+
+# Grafico
+plot(fevd_results)
+```
+
+# Predicción
+```{r}
+# Crear las variables exógenas para el período de predicción
+forecast_exogen <- tail(exogen_vars, 8)
+
+# Realizar predicciones
+forecast_var <- predict(var_model, n.ahead = 8, dumvar = forecast_exogen)
+print(forecast_var)
+```
+
+```{r}
+# Extraer las predicciones para dM2_ts
+forecast_dM2 <- data.frame(
+  tiempo = 1:8,
+  prediccion = forecast_var$fcst$dM2[, 1],
+  inferior = forecast_var$fcst$dM2[, 2],
+  superior = forecast_var$fcst$dM2[, 3]
+)
+
+# Gráfico de Predicción
+ggplot(forecast_dM2, aes(x = tiempo, y = prediccion)) +
+  geom_line(color = "blue") +
+  geom_ribbon(aes(ymin = inferior, ymax = superior), alpha = 0.2, fill = "blue") +
+  labs(title = "Predicción de la Oferta Monetaria M2",
+       x = "Trimestres",
+       y = "Predicción") +
+  theme_minimal()
+```
+
+
+
+

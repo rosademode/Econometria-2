@@ -1,0 +1,727 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  12pt,
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+\fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+\fancypagestyle{plain}{ \fancyhead{} \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}} \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={¿Cuál será la oferta de dinero M2 en Chile el próximo trimestre basada en las variables macroeconómicas disponibles?},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{\textbf{¿Cuál será la oferta de dinero M2 en Chile el próximo
+trimestre basada en las variables macroeconómicas disponibles?}}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+\maketitle
+\vspace{4cm}
+\begin{center}
+\large \textbf{Estudiantes:} \\
+\vspace{0.5cm}
+\large Dania Bustamante \\
+\large Rosana Cardona \\
+\large José Casanova \\
+\vfill
+\large \textbf{Curso}: Econometría II \\
+\large \textbf{Profesor}: Mauricio Tejada \\
+\large 3 julio 2024 \\
+\vspace{1cm}
+\end{center}
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introducción}\label{introducciuxf3n}
+
+La oferta monetaria M2 es un componente esencial en el análisis
+económico, ya que incluye tanto el dinero en circulación como otros
+depósitos de alta liquidez. La predicción de M2 es fundamental para la
+formulación de políticas económicas, especialmente en contextos de
+estabilidad financiera y control de la inflación. Este estudio plantea
+la pregunta: ¿Cuál será la oferta de dinero M2 en Chile el próximo
+trimestre basada en las variables macroeconómicas disponibles? La
+hipótesis es que variables como la tasa de política monetaria, el tipo
+de cambio nominal, el índice de precios al consumidor (IPC) y el PIB
+tienen un impacto significativo en la predicción de M2.
+
+Investigaciones previas han mostrado una alta correlación entre la
+oferta monetaria, el PIB y los niveles de precios. Por ejemplo, Friedman
+y Schwartz (1963) demostraron que la oferta monetaria está estrechamente
+relacionada con el PIB y la inflación. Bernanke y Blinder (1992) también
+subrayaron la importancia de la política monetaria en la determinación
+de la oferta monetaria.
+
+Para abordar esta pregunta, este estudio incluye variables clave como la
+tasa de política monetaria, el tipo de cambio nominal, el IPC y el PIB,
+con el fin de entender cómo influyen en la oferta monetaria y, por ende,
+en la economía en general. La inclusión de estas variables permite un
+análisis detallado de los factores que afectan M2 y cómo las políticas
+monetarias pueden ser ajustadas para alcanzar objetivos económicos
+específicos. \newpage
+
+\section{Metodología}\label{metodologuxeda}
+
+\subsection{Definición del Modelo y Método de
+Estimación:}\label{definiciuxf3n-del-modelo-y-muxe9todo-de-estimaciuxf3n}
+
+Para responder a nuestra pregunta de investigación, utilizamos dos
+enfoques principales: el Modelo Autoregresivo de Retardos Distribuidos
+(ARD) y el Modelo Vector Autoregresivo (VAR). Cada uno de estos modelos
+tiene sus ventajas y consideraciones, utilizando ambos para obtener una
+visión integral de los factores que influyen en la oferta monetaria M2 y
+la capacidad de estos modelos para realizar predicción.
+
+\subsection{Modelo Autoregresivo de Retardos Distribuidos
+(ARD)}\label{modelo-autoregresivo-de-retardos-distribuidos-ard}
+
+El Modelo Autoregresivo de Retardos Distribuidos (ARD) nos permite
+incluir los rezagos de la variable dependiente (M2) y otras variables
+explicativas (IPC, PIB, TCN, TPM), junto con variables dummy para
+eventos específicos y estacionalidad. Este enfoque es útil para capturar
+la dinámica temporal de la serie de tiempo, permitiendo que los valores
+pasados de M2 y otras variables macroeconómicas influyan en los valores
+presentes.
+
+La especificación general del modelo ARD es:
+
+\begin{align*}
+\Delta \log(\text{M2}_t) &= \beta_0 + \beta_1 \Delta \log(\text{M2}_{t-1}) + \beta_2 \Delta \log(\text{IPC}_t) \\
+&\quad + \beta_3 \Delta \log(\text{PIB}_t) + \beta_4 \Delta \log(\text{TCN}_t) + \beta_5 \Delta \log(\text{TPM}_t) \\
+&\quad + \beta_6 \delta_{2008} + \beta_7 \delta_{2010} + \beta_8 \delta_{2020} \\
+&\quad + \beta_9 \delta_{Q1} + \beta_{10} \delta_{Q2} + \beta_{11} \delta_{Q3} + \epsilon
+\end{align*}
+
+En este modelo, las variables dummy permiten capturar efectos
+específicos de ciertos eventos históricos y estacionales que podrían
+afectar la oferta monetaria M2. Sin embargo, una de las limitaciones del
+modelo ARD es la posible existencia de endogeneidad, lo que puede sesgar
+las estimaciones y hacer que los resultados sean menos confiables.
+
+En el contexto del modelo ARD, la endogeneidad puede surgir debido a la
+relación simultánea entre las variables macroeconómicas. Por ejemplo,
+cambios en la tasa de política monetaria pueden afectar el PIB y, a su
+vez, el PIB puede influir en la tasa de política monetaria. Esta
+interdependencia no se captura completamente en un modelo ARD, lo que
+puede llevar a problemas de estimación. Por esta razón, complementamos
+nuestro análisis con un modelo VAR, que es más adecuado para manejar la
+endogeneidad.
+
+\subsection{Modelo Vector Autoregresivo
+(VAR)}\label{modelo-vector-autoregresivo-var}
+
+El Modelo Vector Autoregresivo (VAR) nos permite capturar las
+interrelaciones entre todas las variables macroeconómicas incluidas. En
+un modelo VAR, todas las variables se trataron como endógenas, y cada
+una de ellas se modela como una función de sus propios rezagos y los
+rezagos de las demás variables del sistema.
+
+La forma reducida en notación matricial del sistema VAR(1) es:
+
+\[\mathbf{Z}_t = \mathbf{A} + \mathbf{\Phi} \mathbf{Z}_{t-1} + \mathbf{\epsilon}_t\]
+
+Donde:
+
+\begin{itemize}
+\tightlist
+\item
+  \(\mathbf{Z}_t\) es el vector de las variables endógenas en el tiempo
+  \(t\),
+\item
+  \(\mathbf{A}\) es el vector de constantes,
+\item
+  \(\mathbf{\Phi}\) es la matriz de coeficientes de los rezagos,
+\item
+  \(\mathbf{\epsilon}_t\) es el vector de términos de error.
+\end{itemize}
+
+\[
+\begin{pmatrix}
+\log(\text{M2}_t) \\
+\log(\text{IPC}_t) \\
+\log(\text{PIB}_t) \\
+\log(\text{TCN}_t) \\
+\log(\text{TPM}_t)
+\end{pmatrix}
+=
+\begin{pmatrix}
+\alpha_{1} \\
+\alpha_{2} \\
+\alpha_{3} \\
+\alpha_{4} \\
+\alpha_{5}
+\end{pmatrix}
++
+\begin{pmatrix}
+\phi_{11} & \phi_{12} & \phi_{13} & \phi_{14} & \phi_{15} \\
+\phi_{21} & \phi_{22} & \phi_{23} & \phi_{24} & \phi_{25} \\
+\phi_{31} & \phi_{32} & \phi_{33} & \phi_{34} & \phi_{35} \\
+\phi_{41} & \phi_{42} & \phi_{43} & \phi_{44} & \phi_{45} \\
+\phi_{51} & \phi_{52} & \phi_{53} & \phi_{54} & \phi_{55}
+\end{pmatrix}
+\begin{pmatrix}
+\log(\text{M2}_{t-1}) \\
+\log(\text{IPC}_{t-1}) \\
+\log(\text{PIB}_{t-1}) \\
+\log(\text{TCN}_{t-1}) \\
+\log(\text{TPM}_{t-1})
+\end{pmatrix}
++
+\begin{pmatrix}
+\epsilon_{1t} \\
+\epsilon_{2t} \\
+\epsilon_{3t} \\
+\epsilon_{4t} \\
+\epsilon_{5t}
+\end{pmatrix}
+\]
+
+En este modelo, cada ecuación representa una variable endógena y su
+relación con los rezagos de todas las variables del sistema. Esto
+permite capturar la endogeneidad y las interrelaciones dinámicas entre
+las variables macroeconómicas.
+
+El modelo VAR ofrece varias ventajas importantes:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Causalidad de Granger:} Permite evaluar si una variable es
+  útil para predecir otra variable a través del análisis de causalidad
+  de Granger.
+\item
+  \textbf{Funciones de Impulso Respuesta:} Permite analizar cómo un
+  choque en una variable afecta a las demás variables en el tiempo.
+\item
+  \textbf{Descomposición de la Varianza:} Permite descomponer la
+  variabilidad de cada variable en función de los choques en todas las
+  variables del sistema.
+\end{itemize}
+
+El uso combinado de los modelos ARD y VAR nos permite abordar de manera
+integral la predicción de la oferta monetaria M2, considerando tanto la
+dinámica temporal como las interrelaciones entre las variables
+macroeconómicas, mitigando los problemas de endogeneidad que podrían
+afectar la confiabilidad de los resultados.
+
+\subsection{Evaluación de la
+Endogeneidad}\label{evaluaciuxf3n-de-la-endogeneidad}
+
+Para evaluar la endogeneidad de las variables en el modelo VAR, es
+importante considerar la teoría económica y cómo cada variable responde
+a los cambios en las demás variables. Basado en la literatura económica,
+podemos organizar las variables de la más endógena a la menos endógena
+de la siguiente manera:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Oferta Monetaria M2:} Altamente endógena porque responde
+  directamente a las políticas del banco central (TPM) y a cambios en el
+  nivel de precios (IPC), el PIB y el tipo de cambio nominal (TCN).
+\item
+  \textbf{Índice de Precios al Consumidor (IPC):} Altamente endógeno
+  porque se ve afectado por la oferta monetaria (M2) y el tipo de cambio
+  nominal (TCN).
+\item
+  \textbf{Producto Interno Bruto (PIB):} Endógeno porque responde a
+  cambios en la política monetaria (TPM), el nivel de precios (IPC) y la
+  oferta monetaria (M2).
+\item
+  \textbf{Tipo de Cambio Nominal (TCN):} Menor endógeneidad que las
+  variables anteriores, sin embargo, responde a cambios en la política
+  monetaria (TPM) y a los movimientos del PIB y la oferta monetaria
+  (M2).
+\item
+  \textbf{Tasa de Política Monetaria (TPM):} Poca endógeneidad en
+  comparación con las otras variables, ya que es una herramienta de
+  política controlada por el banco central.
+\end{enumerate}
+
+Basado en el análisis teórico, la oferta monetaria M2 es la variable más
+endógena, seguida por el IPC, el PIB, el TCN y finalmente la TPM.
+
+\section{Descripción de los Datos}\label{descripciuxf3n-de-los-datos}
+
+Los datos utilizados en este estudio fueron obtenidos de la página del
+Banco Central de Chile, y comprenden varias variables económicas clave
+ajustadas a datos trimestrales:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{M2:} Oferta monetaria.
+\item
+  \textbf{IPC:} Índice de Precios al Consumidor, ajustado a trimestral.
+\item
+  \textbf{PIB:} Producto Interno Bruto.
+\item
+  \textbf{TCN:} Tipo de Cambio Nominal.
+\item
+  \textbf{TPM:} Tasa de Política Monetaria.
+\end{itemize}
+
+Estas variables proporcionan una visión integral de diferentes aspectos
+de la economía chilena, permitiendo análisis detallados sobre el
+comportamiento y las interacciones entre políticas monetarias, precios,
+actividad económica y el mercado cambiario. Por otra parte, las series
+de tiempo se transformaron a logaritmos y se diferenciaron para asegurar
+la estacionariedad. Además, se crearon variables dummy para eventos
+específicos (2008, 2010, 2020) y estacionales (Q1, Q2, Q3).
+
+\textbf{\emph{Estadísticas Descriptivas:}}
+
+\begingroup\fontsize{10}{12}\selectfont
+
+\begin{longtable}[t]{lrrrrr}
+\toprule
+ & mean & sd & median & min & max\\
+\midrule
+M2 & 7.552937e+04 & 5.713168e+04 & 56475.081500 & 10808.9600000 & 1.986452e+05\\
+IPC & 3.233038e-01 & 2.901452e-01 & 0.300000 & -0.2666667 & 1.166667e+00\\
+PIB & 3.619889e+04 & 1.006787e+04 & 35968.871896 & 19581.2485453 & 5.433831e+04\\
+TCN & 6.028063e+02 & 1.274393e+02 & 578.266825 & 408.1122951 & 9.455024e+02\\
+TPM & 4.526827e+00 & 2.567536e+00 & 4.540909 & 0.5000000 & 1.125000e+01\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{itemize}
+\item
+  La Oferta Monetaria M2 (en miles de millones de pesos) posee una alta
+  variación dada su desviación estándar. Mediana bien alejada de la
+  media, por lo que se asume sesgo por defecto en la distribución.
+\item
+  El Índice de Precios al Consumidor IPC posee una media cercana a 0,
+  variaciones dentro de lo normal, a primera vista no existe sesgo dada
+  la naturaleza de la media y la mediana.
+\item
+  El Producto Interno Bruto PIB (miles de millones de pesos) posee una
+  distribución menos fluctuante que las anteriores, la media y la
+  mediana se mantienen relativamente parecidas.
+\item
+  El Tipo de cambio nominal TCN (dólar observado \$CLP/USD) tiene una
+  variación que ha ido fluctuando con mayores diferencias en los últimos
+  años ya que la mediana es alrededor de 30 pesos más baja que la media.
+  Aparentemente una desviación alta.
+\item
+  La Tasa de política monetaria TPM (porcentaje) tiene una media y
+  mediana prácticamente iguales, por no decir la misma, desviación
+  estándar considerable dada la naturaleza de los datos.
+\end{itemize}
+
+\section{Análisis gráfico}\label{anuxe1lisis-gruxe1fico}
+
+Los gráficos presentados proporcionan una visión integral de la
+transformación de las variables económicas para asegurar la
+estacionariedad, una condición necesaria para la aplicación de modelos
+econométricos. El análisis confirma que, tras la diferenciación, las
+series temporales de M2, IPC, PIB, TCN y TPM se han convertido en
+estacionarias, lo que valida el uso de modelos ARD y VAR en nuestro
+estudio para predecir la oferta monetaria M2. Estos modelos nos permiten
+capturar las dinámicas temporales y las interrelaciones entre las
+variables, ofreciendo una base sólida para el análisis.
+
+\subsection{Aplicación de logaritmo}\label{aplicaciuxf3n-de-logaritmo}
+
+\subsubsection{Logaritmo de las
+variables}\label{logaritmo-de-las-variables}
+
+Al tomar los logaritmos de estas variables, buscamos estabilizar la
+varianza y obtener una relación más lineal entre las variables. Los
+logaritmos ayudan a manejar la heterocedasticidad y permiten una mejor
+interpretación de las tasas de crecimiento.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-3-1} \end{center}
+
+Al principio, se observan los logaritmos de las variables con el fin de
+estabilizar la varianza y buscar linealidad entre variables. Es
+plausible encontrar una tendencia, ya sea creciente o decreciente,
+dependiendo de la variable y queda en evidencia la no estacionariedad de
+las series de tiempo.
+
+\subsubsection{Autocorrelación de Logaritmo de las
+variables}\label{autocorrelaciuxf3n-de-logaritmo-de-las-variables}
+
+El siguietne gráfico presenta las funciones de autocorrelación (ACF) de
+las series logarítmicas de las variables económicas. La ACF muestra la
+correlación de una variable consigo misma en diferentes rezagos.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-4-1} \end{center}
+
+Los gráficos ACF de M2 y PIB, en particular, exhiben un patrón de
+autocorrelación que decrece lentamente, lo que confirma la no
+estacionariedad de estas series, puesto que se refleja en la
+persistencia de la correlación en varios rezagos, sugiriendo que los
+valores actuales están influenciados por valores pasados durante un
+período prolongado.
+
+\subsection{Aplicación de
+diferenciación}\label{aplicaciuxf3n-de-diferenciaciuxf3n}
+
+Para eliminar la tendencia, se diferencian las variables con el fin
+convertir las series a estacionarias, así se pueden captar relaciones
+significativas entre las variables.
+
+\subsubsection{Diferenciación del Logaritmo de las
+variables}\label{diferenciaciuxf3n-del-logaritmo-de-las-variables}
+
+Al realizar la diferenciación, es posible observar que las tendencias a
+largo plazo ya desaparecieron, ahora cada serie de tiempo fluctúa en
+base a una media constante, se cumple la estacionariedad que tanto se
+buscaba.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-5-1} \end{center}
+
+\subsubsection{Autocorrelación de la Diferenciación del Logaritmo de las
+variables}\label{autocorrelaciuxf3n-de-la-diferenciaciuxf3n-del-logaritmo-de-las-variables}
+
+Las funciones de autocorrelación de las diferencias logarítmicas
+confirman que las series se han convertido en estacionarias, ya que la
+mayoría de los coeficientes de autocorrelación caen rápidamente a cero,
+y no se observa una correlación significativa en los rezagos más
+lejanos. Esto es crucial, ya que si se va a trabajar con los modelos ARD
+y VAR, es necesario que las series sean estacionarias.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-6-1} \end{center}
+
+\section{Resultados del Modelo}\label{resultados-del-modelo}
+
+\subsection{Estimación del Modelo
+ARD:}\label{estimaciuxf3n-del-modelo-ard}
+
+El modelo ARD se ajustó con el número óptimo de rezagos basado en el
+criterio AIC. Los resultados mostraron que las variables dIPC\_ts y
+dPIB\_ts tienen un impacto significativo en dM2\_ts, con coeficientes
+positivos y significativos, mientras que las demás variables no
+mostraron significancia estadística considerable.
+
+\subsubsection{Evaluación de la Autocorrelación y
+Heterocedasticidad:}\label{evaluaciuxf3n-de-la-autocorrelaciuxf3n-y-heterocedasticidad}
+
+\begin{itemize}
+\tightlist
+\item
+  Durbin-Watson Test: No se encontró autocorrelación significativa en
+  los residuos.
+\item
+  Breusch-Pagan Test: No se encontró evidencia significativa de
+  heterocedasticidad.
+\end{itemize}
+
+Los resultados del modelo ARD, en resumen, son básicamente todos no
+significativos, menos el PIB, pero una sola variable significativa no es
+suficiente como para quedarse con el modelo, no vale la pena. Esto
+debido a que el modelo probablemente no es lo suficientemente robusto y
+además es poco complejo para analizar la correlación que puede existir
+entre todas las variables estudiadas. Además comentar que el R cuadrado
+arroja un resultado bajísimo de apenas 0.16 aproximadamente.
+
+Lo anterior da pie a que se evalúe un modelo VAR, para capturar la
+complejidad del problema, donde es probable que incluso se tenga que
+realizar una evaluación de causalidad de Granger para saber si las
+variables explican en una dirección o si mantienen una doble implicancia
+entre ellas.
+
+\subsection{Estimación del Modelo
+VAR}\label{estimaciuxf3n-del-modelo-var}
+
+El modelo VAR se ajustó con las variables exógenas y el número óptimo de
+rezagos seleccionado.
+
+Según nuestros resultados, aquellas variables que tienen una causalidad
+de granger significativa sobre la M2 es principalmente el IPC y la TCN,
+mientras que los parámetros PIB y TPM mantienen una causalidad de
+granger no significativa.
+
+Esto no quiere decir que el modelo sea incorrecto, esto lo único que
+explica es que unas variables mantienen una relación más fuerte para
+poder predecir la variable en cuestión. Esto se puede deber en base a la
+naturaleza del modelo, o que existe un valor predictivo, solo que no tan
+importante versus las otras variables que sí lo son.
+
+Esto incluso en un futuro, podría ayudar a perfeccionar aún más la
+predicción, sin estar errónea la predicción que ya existe del M2, solo
+que cabe la posibilidad de que sea menos precisa de lo que se esperaba
+según el modelo VAR que por defecto si daba resultados significativos.
+
+\subsubsection{Funciones de Impulso
+Respuesta:}\label{funciones-de-impulso-respuesta}
+
+Las funciones de impulso respuesta indicaron que un choque en dM2 tiene
+efectos persistentes en sí mismo, mientras que choques en dIPC y dPIB
+también afectan significativamente a dM2 en el tiempo, confirmando la
+importancia de estas variables en la predicción de M2.
+
+En el caso de la M2 sobre sí misma, inicialmente muestra una respuesta
+positiva que se disipa rápidamente en los primeros períodos, concluyendo
+en una oscilación constante alrededor de la media 0. Estos son choques
+transitorios.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-7-1} \end{center}
+
+En cuanto a la IPC sobre la M2, se observa un oscilamiento constante
+respecto a la media 0 desde el inicio, indicando efectos positivos y
+negativos variables. A partir del noveno período, predomina un impulso
+mayormente negativo.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-8-1} \end{center}
+
+Al observar el PIB sobre la M2, en su mayoría se observa un estímulo
+positivo sin un comportamiento oscilatorio como en los casos anteriores.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-9-1} \end{center}
+
+En contraste, la TCN tiene efectos casi opuestos sobre la M2, mayormente
+negativos y sin un patrón oscilatorio claro, con solo dos casos donde
+superó ligeramente la barrera negativa.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-10-1} \end{center}
+
+Finalmente, la TPM ejerce un fuerte estímulo positivo en los primeros
+períodos, aunque no desde el inicio como tal, cambiando abruptamente
+hacia un comportamiento negativo más equilibrado posteriormente.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-11-1} \end{center}
+
+\subsubsection{Descomposición de la
+Varianza:}\label{descomposiciuxf3n-de-la-varianza}
+
+Las descomposiciones de la varianza, las observamos en las distintas
+variables que se están estudiando, y es una forma de asignarle
+explicación según qué otra variable estudiada, es decir, qué tanto se
+explican entre sí. Lo lógico sería que a medida que pasa el tiempo, lo
+que ocurrió en el primer período, se vaya diluyendo con el tiempo.
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-12-1} \end{center}
+
+\begin{itemize}
+\item
+  La varianza del M2 es mayormente explicada por sí misma al principio,
+  pero va perdiendo fuerza gradualmente, alcanzando aproximadamente la
+  mitad de su explicación inicial a lo largo de 12 períodos.
+\item
+  En cuanto a la varianza de la Tasa Nominal de Cambio, esta se explica
+  en menor medida por sí misma pero se mantiene más constante con el
+  tiempo.
+\item
+  La varianza del IPC muestra una fuerte explicación por sí misma, que
+  se mantiene por encima del 50\% a largo plazo.
+\item
+  Para la varianza de la TPM, se observa alrededor del 80\% de
+  explicación al inicio, pero esta proporción se reduce
+  considerablemente con el paso del tiempo.
+\item
+  Finalmente, en la varianza del PIB, se puede afirmar que es la que
+  mantiene mayor consistencia a lo largo del tiempo en su explicación.
+\item
+  La descomposición de la varianza revela que una parte significativa de
+  la variabilidad en M2 puede atribuirse a los choques en M2 mismo, así
+  como a los choques en IPC y PIB, subrayando la relevancia de estas
+  variables.
+\item
+  El modelo VAR nos ha permitido generar la siguiente predicción de la
+  oferta monetaria basada en las variables macroeconómicas incluidas.
+\end{itemize}
+
+\begin{center}\includegraphics{grupo_prediccion_informe_files/figure-latex/unnamed-chunk-13-1} \end{center}
+
+\begin{itemize}
+\item
+  Al analizar el gráfico, la línea azul representa la predicción
+  mientras que el área sombreada indica el intervalo de confianza al
+  95\%, que refleja la variabilidad real de la predicción.
+\item
+  En los primeros dos trimestres se observa un crecimiento, aunque con
+  valores negativos indicando una posible disminución de la oferta
+  monetaria entre un 1\% y un 5\%.
+\item
+  Desde el tercer trimestre hasta el séptimo, esta tendencia se mantiene
+  constante, alcanzando un pico de casi 6\% de aumento, sugiriendo una
+  continuación del crecimiento.
+\item
+  A partir del segundo año, específicamente en el octavo trimestre, es
+  probable que se experimente una marcada desaceleración en el
+  crecimiento de la oferta monetaria, lo que podría ser indicativo de un
+  comportamiento cíclico típico de estas variables.
+\item
+  El horizonte de 8 trimestres se justifica debido a que más allá de
+  este punto, la incertidumbre aumenta considerablemente. El área
+  sombreada del intervalo de confianza se amplía y podría reflejar más
+  el ruido en los datos, haciendo menos realista cualquier predicción a
+  largo plazo. Se recomienda actualizar la información conforme pase el
+  tiempo y mantener un horizonte de análisis de 8 trimestres para
+  evaluar la persistencia del comportamiento cíclico, especialmente en
+  respuesta a posibles shocks económicos a lo largo del tiempo. \newpage
+\end{itemize}
+
+\section{Conclusión}\label{conclusiuxf3n}
+
+\subsection{Resumen de Resultados:}\label{resumen-de-resultados}
+
+\begin{itemize}
+\item
+  Los resultados obtenidos confirman que las variables IPC y PIB tienen
+  un impacto significativo en la predicción de la oferta monetaria M2.
+  La hipótesis planteada se valida parcialmente, ya que, aunque algunas
+  variables como la Tasa Nominal de Cambio (TCN) y la Tasa de Política
+  Monetaria (TPM) no mostraron significancia estadística, el IPC y el
+  PIB demostraron ser predictivos de M2, al menos a corto plazo.
+\item
+  Estos hallazgos están en línea con estudios previos que sugieren que
+  la oferta monetaria está influenciada significativamente por variables
+  económicas como los niveles de precios. La oferta monetaria M2 puede
+  predecirse de manera efectiva utilizando un modelo VAR, y esta
+  predicción puede refinarse con pruebas adicionales, como los análisis
+  de impulso-respuesta y causalidad de Granger. Es esencial considerar
+  si las predicciones son a corto o largo plazo, dependiendo de la
+  relevancia para el tipo de análisis.
+\item
+  Es importante destacar los límites de las predicciones a muy largo
+  plazo. Intentar pronosticar más allá de un horizonte razonable puede
+  resultar en la dilución de la influencia de las variables
+  explicativas, disminuyendo la precisión de los resultados obtenidos en
+  los primeros períodos.
+\item
+  Respecto a la hipótesis, debe ser aceptada, dado que la predicción en
+  este estudio se limita a un máximo de 8 trimestres (2 años). En este
+  horizonte, las variables de mayor impacto son el IPC y el PIB, como lo
+  sugieren los estudios mencionados. A largo plazo, el PIB va perdiendo
+  fuerza predictiva, mientras que la TCN gana mayor relevancia junto con
+  el IPC. Sin embargo, esta tendencia no es relevante para predicciones
+  a corto plazo.
+\item
+  Se recomienda actualizar el modelo VAR con los datos más recientes a
+  medida que estén disponibles. Esta actualización permitirá mantener la
+  fiabilidad de las predicciones para los períodos más cercanos. El uso
+  continuo de un horizonte de predicción de 8 trimestres asegurará que
+  las predicciones sean precisas y útiles para la toma de decisiones
+  económicas a corto plazo.
+\end{itemize}
+
+\subsection{Comparación de modelos.}\label{comparaciuxf3n-de-modelos.}
+
+\begin{itemize}
+\item
+  Modelo ARD: Este modelo generalmente se utiliza para estudiar la
+  relación a largo plazo entre una variable dependiente y otras
+  explicativas.
+\item
+  Según los resultados, se mostró que no era significativo este modelo,
+  revelando la variabilidad de los errores no es constante en el tiempo,
+  que directamente afecta los coeficientes estimados.
+\item
+  Modelo VAR: Este modelo es útil principalmente cuando las variables
+  pueden influenciarse mutuamente, en el contexto de variables
+  macroeconómicas, esto es más plausible.
+\item
+  Según los resultados, la causalidad de Granger indica flujo de
+  información desde el IPC, PIB y TCN hacia la M2, sin embargo la TPM
+  no. Además la respuesta de M2 a sus propios choques, muestra un efecto
+  inicial positivo que se va desvaneciendo con el tiempo.
+\item
+  El modelo VAR fue más adecuado para capturar la interrelación entre
+  las variables, hay interdependencia significativa entre M2 y las
+  variables explicativas escogidas, lo que nos permite realizar
+  predicciones más precisas.
+\end{itemize}
+
+\section{Bibliografia}\label{bibliografia}
+
+\begin{itemize}
+\item
+  Feldkircher, M., \& Tondl, G. (2020). Global factors driving inflation
+  and monetary policy: A global VAR assessment. International Advances
+  in Economic Research, 26(3), 225--247.
+  \url{https://doi.org/10.1007/s11294-020-09792-2}
+\item
+  Informe de Política Monetaria Junio 2024 (LSE) - Rosanna Costa,
+  Presidenta. (s/f). Banco Central de Chile. Recuperado el 3 de julio de
+  2024, de
+  \url{https://www.bcentral.cl/es/web/banco-central/contenido/-/details/ipom-junio-2024-lse-rosanna-costa}
+\end{itemize}
+
+\end{document}

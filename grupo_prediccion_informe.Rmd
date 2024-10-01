@@ -1,0 +1,867 @@
+---
+title: "**¿Cuál será la oferta de dinero M2 en Chile el próximo trimestre basada en las variables macroeconómicas disponibles?**"
+output:
+  pdf_document:
+    keep_tex: true
+    toc: false  # Desactivar la tabla de contenido automática
+header-includes:
+  - \usepackage{graphicx}
+  - \usepackage{fancyhdr}
+  - \usepackage{mdframed}
+  - \pagestyle{fancy}
+  - \fancyhead{}
+  - \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+  - \fancyhead[R]{\hspace{0.5cm} Universidad Diego Portales \\ Facultad de Administración y Economía}
+  - \fancypagestyle{plain}{
+      \fancyhead{}
+      \fancyhead[L]{\includegraphics[width=3cm]{logo.jpg}}
+      \fancyhead[R]{\hspace{0.5 cm} Universidad Diego Portales \\ Facultad de Administración y Economía}}
+fontsize: 12pt
+geometry: margin=1in 
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=tex}
+\maketitle
+\vspace{4cm}
+\begin{center}
+\large \textbf{Estudiantes:} \\
+\vspace{0.5cm}
+\large Dania Bustamante \\
+\large Rosana Cardona \\
+\large José Casanova \\
+\vfill
+\large \textbf{Curso}: Econometría II \\
+\large \textbf{Profesor}: Mauricio Tejada \\
+\large 3 julio 2024 \\
+\vspace{1cm}
+\end{center}
+\newpage
+\tableofcontents
+\newpage
+```
+
+
+```{r message=TRUE, warning=TRUE, include=FALSE, paged.print=TRUE}
+# Librerias necesarias
+library(stargazer)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(xts)
+library(dynlm)
+library(urca)
+library(vars)
+library(AICcmodavg)
+library(lmtest)
+library(purrr)
+library(psych)
+library(kableExtra)
+library(knitr)
+
+# Carga de base de datos y modificaciones 
+M2 <- read_excel("M2.xlsx", skip = 2)
+IPC <- read_excel("IPC.xlsx", skip = 2)
+PIB <- read_excel("PIB.xlsx", skip = 2)
+TCN <- read_excel("TCN.xlsx", skip = 2)
+TPM <- read_excel("TPM.xlsx", skip = 2)
+
+# cambio nombre columnas
+colnames(M2) <- c("Periodo", "M2")
+colnames(IPC) <- c("Periodo", "IPC")
+colnames(PIB) <- c("Periodo", "PIB")
+colnames(TCN) <- c("Periodo", "TCN")
+colnames(TPM) <- c("Periodo", "TPM")
+
+# formato de fecha
+M2$Periodo <- as.Date(M2$Periodo, format = "%Y-%m-%d")
+IPC$Periodo <- as.Date(IPC$Periodo, format = "%Y-%m-%d")
+PIB$Periodo <- as.Date(PIB$Periodo, format = "%Y-%m-%d")
+TPM$Periodo <- as.Date(TPM$Periodo, format = "%Y-%m-%d")
+TCN$Periodo <- as.Date(TCN$Periodo, format = "%Y-%m-%d")
+
+# IPC mensual a trimestral 
+xts_ipc <- xts(IPC$IPC, order.by = IPC$Periodo)
+xts_ipc_trimestral <- apply.quarterly(xts_ipc, mean)
+IPC <- data.frame(
+  Periodo = index(xts_ipc_trimestral),
+  IPC = coredata(xts_ipc_trimestral))
+
+# Estadistica descriptiva
+base <- reduce(list(M2, IPC, PIB, TCN, TPM), function(x, y) merge(x, y, by = "Periodo", all = TRUE))
+descriptiva <- describe(base)
+descriptiva <- descriptiva[-1, c("mean", "sd", "median", "min", "max")]
+
+# Convertir a series de tiempo
+inicio <- c(1996, 1)
+frec <- 4  # Trimestral
+M2_ts <- ts(M2$M2, start = inicio, frequency = frec)
+IPC_ts <- ts(IPC$IPC, start = inicio, frequency = frec)
+PIB_ts <- ts(PIB$PIB, start = inicio, frequency = frec)
+TCN_ts <- ts(TCN$TCN, start = inicio, frequency = frec)
+TPM_ts <- ts(TPM$TPM, start = inicio, frequency = frec)
+
+# log y diff log de las variables
+#log
+lM2_ts <- log(M2_ts)
+lIPC_ts <- log(IPC_ts + abs(min(IPC_ts)) + 1)
+lPIB_ts <- log(PIB_ts)
+lTCN_ts <- log(TCN_ts)
+lTPM_ts <- log(TPM_ts)
+
+# diff log
+dM2_ts <- diff(lM2_ts, differences = 1)
+dIPC_ts <- diff(lIPC_ts, differences = 1)
+dPIB_ts <- diff(lPIB_ts, differences = 1)
+dTCN_ts <- diff(lTCN_ts, differences = 1)
+dTPM_ts <- diff(lTPM_ts, differences = 1)
+
+# Tendencia
+tM2_ts <- time(lM2_ts)
+tIPC_ts <- time(lIPC_ts)
+tPIB_ts <- time(lPIB_ts)
+tTCN_ts <- time(lTCN_ts)
+tTPM_ts <- time(lTPM_ts)
+
+#Modelo Tendencia
+mtM2_ts <- lm(lM2_ts ~ tM2_ts)
+mtIPC_ts <- lm(lIPC_ts ~ tIPC_ts)
+mtPIB_ts <- lm(lPIB_ts ~ tPIB_ts)
+mtTCN_ts <- lm(lTCN_ts ~ tTCN_ts)
+mtTPM_ts <- lm(lTPM_ts ~ tTPM_ts)
+
+# Prueba de raiz unitaria
+# serie logaritmica
+M2_ur <- ur.df(lM2_ts, type = c("trend"), selectlags = "AIC")
+IPC_ur <- ur.df(lIPC_ts, type = "trend", selectlags = "AIC")
+PIB_ur <- ur.df(lPIB_ts, type = c("trend"), selectlags = "AIC")
+TCN_ur <- ur.df(lTCN_ts, type = c("trend"), selectlags = "AIC")
+TPM_ur <- ur.df(lTPM_ts, type = c("trend"), selectlags = "AIC")
+
+# diferencia logaritmica 
+M2_ur2 <- ur.df(dM2_ts, type = c("none"), selectlags = "AIC")
+IPC_ur2 <- ur.df(dIPC_ts, type = "none", selectlags = "AIC")
+PIB_ur2 <- ur.df(dPIB_ts, type = c("none"), selectlags = "AIC")
+TCN_ur2 <- ur.df(dTCN_ts, type = "none", selectlags = "AIC")
+TPM_ur2 <- ur.df(dTPM_ts, type = c("none"), selectlags = "AIC")
+
+# funciones de autocorrelación 
+#logaritmo.
+acf_M2 <- acf(lM2_ts, plot = FALSE)
+acf_IPC <- acf(lIPC_ts, plot = FALSE)
+acf_PIB <- acf(lPIB_ts, plot = FALSE)
+acf_TCN <- acf(lTCN_ts, plot = FALSE)
+acf_TPM <- acf(lTPM_ts, plot = FALSE)
+
+#diferencia de logaritmo
+acf_diffM2 <- acf(dM2_ts, plot = FALSE)
+acf_diffIPC <- acf(dIPC_ts, plot = FALSE)
+acf_diffPIB <- acf(dPIB_ts, plot = FALSE)
+acf_diffTCN <- acf(dTCN_ts, plot = FALSE)
+acf_diffTPM <- acf(dTPM_ts, plot = FALSE)
+
+# Dataframes para las Series Temporales y las Funciones de Autocorrelación (Se crean los data.frame para generar gráfico)
+# Dataframes de logaritmos para ver gráficos de estacionariedad
+m2_df <- data.frame(Periodo = time(lM2_ts), Valor = lM2_ts, Variable = "Oferta Monetaria M2")
+ipc_df <- data.frame(Periodo = time(lIPC_ts), Valor = lIPC_ts, Variable = "IPC")
+pib_df <- data.frame(Periodo = time(lPIB_ts), Valor = lPIB_ts, Variable = "PIB")
+tcn_df <- data.frame(Periodo = time(lTCN_ts), Valor = lTCN_ts, Variable = "Tipo de Cambio Nominal")
+tpm_df <- data.frame(Periodo = time(lTPM_ts), Valor = lTPM_ts, Variable = "Tasa de Política Monetaria")
+
+# Dataframes de diferencia de logaritmos para ver gráficos de estacionariedad
+diffm2_df <- data.frame(Periodo = time(dM2_ts), Valor = dM2_ts, Variable = "Oferta Monetaria M2")
+diffipc_df <- data.frame(Periodo = time(dIPC_ts), Valor = dIPC_ts, Variable = "IPC")
+diffpib_df <- data.frame(Periodo = time(dPIB_ts), Valor = dPIB_ts, Variable = "PIB")
+difftcn_df <- data.frame(Periodo = time(dTCN_ts), Valor = dTCN_ts, Variable = "Tipo de Cambio Nominal")
+difftpm_df <- data.frame(Periodo = time(dTPM_ts), Valor = dTPM_ts, Variable = "Tasa de Política Monetaria")
+
+# Dataframes de logaritmos para ver gráficos de correlación
+acf_df_M2 <- data.frame(Lag = acf_M2$lag, ACF = acf_M2$acf, Variable = "M2")
+acf_df_IPC <- data.frame(Lag = acf_IPC$lag, ACF = acf_IPC$acf, Variable = "IPC")
+acf_df_PIB <- data.frame(Lag = acf_PIB$lag, ACF = acf_PIB$acf, Variable = "PIB")
+acf_df_TCN <- data.frame(Lag = acf_TCN$lag, ACF = acf_TCN$acf, Variable = "TCN")
+acf_df_TPM <- data.frame(Lag = acf_TPM$lag, ACF = acf_TPM$acf, Variable = "TPM")
+
+# Dataframes de diferencia de logaritmos para ver gráficos de correlación
+acf_diff_M2 <- data.frame(Lag = acf_diffM2$lag, ACF = acf_diffM2$acf, Variable = "M2")
+acf_diff_IPC <- data.frame(Lag = acf_diffIPC$lag, ACF = acf_diffIPC$acf, Variable = "IPC")
+acf_diff_PIB <- data.frame(Lag = acf_diffPIB$lag, ACF = acf_diffPIB$acf, Variable = "PIB")
+acf_diff_TCN <- data.frame(Lag = acf_diffTCN$lag, ACF = acf_diffTCN$acf, Variable = "TCN")
+acf_diff_TPM <- data.frame(Lag = acf_diffTPM$lag, ACF = acf_diffTPM$acf, Variable = "TPM")
+
+# Generar un solo data frames. Esto se realiza para que al momento de graficar sea amigable observar
+combined_df <- bind_rows(m2_df, ipc_df, pib_df, tcn_df, tpm_df)
+combined_diff <- bind_rows(diffm2_df, diffipc_df, diffpib_df, difftcn_df, difftpm_df)
+acf_combined_df <- bind_rows(acf_df_M2, acf_df_IPC, acf_df_PIB, acf_df_TCN, acf_df_TPM)
+acf_combined_diff <- bind_rows(acf_diff_M2, acf_diff_IPC, acf_diff_PIB, acf_diff_TCN, acf_diff_TPM)
+
+# Gráficos de las series temporales y autocorrelación
+# gráficas para log
+
+# Gráfica con logaritmos estacionariedad
+ggplot(combined_df, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Logaritmo)") +
+  theme_minimal()
+
+# Gráfico: ACF de las series logarítmicas
+ggplot(acf_combined_df, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Series Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Gráfica con diferencia de logaritmos estacionariedad
+ggplot(combined_diff, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Diferencias Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Diff Logaritmo)") +
+  theme_minimal()
+
+# Gráfico: ACF de las series logarítmicas diferenciadas
+ggplot(acf_combined_diff, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Diferencias Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Creación de variables Dummy 
+#Variables Dummy para Evaluar Eventos
+fun_dummy <- function(data, years) {
+  for (year in years) {
+    dummy_var <- paste0("dummy_", year)
+    data[[dummy_var]] <- ifelse(format(data$Periodo, "%Y") == as.character(year), 1, 0)
+  }
+  return(data)
+}
+
+M2 <- fun_dummy(M2, c(2008, 2010, 2020))
+IPC <- fun_dummy(IPC, c(2008, 2010, 2020))
+PIB <- fun_dummy(PIB, c(2008, 2010, 2020))
+TPM <- fun_dummy(TPM, c(2008, 2010, 2020))
+TCN <- fun_dummy(TCN, c(2008, 2010, 2020))
+
+# Convertir las dummies a series de tiempo
+dummy_2008_ts <- ts(M2$dummy_2008, start = inicio, frequency = frec)
+dummy_2010_ts <- ts(M2$dummy_2010, start = inicio, frequency = frec)
+dummy_2020_ts <- ts(M2$dummy_2020, start = inicio, frequency = frec)
+
+#Variables Dummy Estacionales 
+# Creación de variables dummy para los trimestres en cada dataset
+crear_dummies_estacionales <- function(data) {
+  data$Quarter <- quarters(data$Periodo)
+  data$dummy_Q1 <- ifelse(data$Quarter == "Q1", 1, 0)
+  data$dummy_Q2 <- ifelse(data$Quarter == "Q2", 1, 0)
+  data$dummy_Q3 <- ifelse(data$Quarter == "Q3", 1, 0)
+  return(data)
+}
+
+M2 <- crear_dummies_estacionales(M2)
+IPC <- crear_dummies_estacionales(IPC)
+PIB <- crear_dummies_estacionales(PIB)
+TPM <- crear_dummies_estacionales(TPM)
+TCN <- crear_dummies_estacionales(TCN)
+
+# Convertir las dummies a series de tiempo
+dummy_Q1_ts <- ts(M2$dummy_Q1, start = inicio, frequency = frec)
+dummy_Q2_ts <- ts(M2$dummy_Q2, start = inicio, frequency = frec)
+dummy_Q3_ts <- ts(M2$dummy_Q3, start = inicio, frequency = frec)
+
+# Modelo ARD
+res <- data.frame(Lag = integer(), AIC = numeric(), BIC = numeric())
+
+for (lag in 1:10) {
+  formula <- as.formula(paste("dM2_ts ~ L(dM2_ts, 1:", lag, ") + dIPC_ts + dPIB_ts + dTCN_ts + dTPM_ts + dummy_2008_ts + dummy_2010_ts + dummy_2020_ts + dummy_Q1_ts + dummy_Q2_ts + dummy_Q3_ts", sep = ""))
+  model <- dynlm(formula)
+  
+  aic_value <- AIC(model)
+  bic_value <- BIC(model)
+  
+  res <- rbind(res, data.frame(Lag = lag, AIC = aic_value, BIC = bic_value))
+}
+
+# Ajustar el modelo ARD con el número óptimo de rezagos
+
+mejor <- res[which.min(res$AIC), "Lag"]
+opt <- mejor  
+form_opt <- as.formula(paste("dM2_ts ~ L(dM2_ts, 1:", opt, ") + dIPC_ts + dPIB_ts + dTCN_ts + dTPM_ts + dummy_2008_ts + dummy_2010_ts + dummy_2020_ts + dummy_Q1_ts + dummy_Q2_ts + dummy_Q3_ts", sep = ""))
+ard_mod_opt <- dynlm(form_opt)
+
+# Verificar significancia de las dummies estacionales
+
+coefficients <- summary(ard_mod_opt)$coefficients
+dummy_vars <- coefficients[grep("dummy_Q", rownames(coefficients)), ]
+print(dummy_vars)
+
+# Pruebas de diagnostico
+
+dw_test <- dwtest(ard_mod_opt)
+print(dw_test)
+bp_test <- bptest(ard_mod_opt)
+
+# Modelo VAR con Variables Exógenas
+# Crear dataframe con variables exógenas
+exogen_vars <- data.frame(
+  dummy_2008 = as.numeric(dummy_2008_ts),
+  dummy_2010 = as.numeric(dummy_2010_ts),
+  dummy_2020 = as.numeric(dummy_2020_ts),
+  dummy_Q1 = as.numeric(dummy_Q1_ts),
+  dummy_Q2 = as.numeric(dummy_Q2_ts),
+  dummy_Q3 = as.numeric(dummy_Q3_ts)
+)
+
+# Crear base de datos para el modelo VAR
+base_com <- data.frame(
+  dM2 = as.numeric(dM2_ts),
+  dIPC = as.numeric(dIPC_ts),
+  dPIB = as.numeric(dPIB_ts),
+  dTCN = as.numeric(dTCN_ts),
+  dTPM = as.numeric(dTPM_ts)
+)
+
+# Asegurar que todas las series tengan el mismo número de filas
+min_length <- min(nrow(base_com), nrow(exogen_vars))
+base_com <- base_com[1:min_length, ]
+exogen_vars <- exogen_vars[1:min_length, ]
+
+# Seleccionar el número óptimo de rezagos
+sel_lag <- VARselect(base_com, lag.max = 10, type = "const", exogen = exogen_vars)
+opt <- sel_lag$selection["AIC(n)"]
+print(opt)
+
+# Ajustar el modelo VAR con variables exógenas
+var_model <- VAR(base_com, p = opt, type = "const", exogen = exogen_vars)
+summary(var_model)
+
+# Evaluación de Causalidad de Granger
+names(var_model$varresult)
+# Evaluación de Causalidad de Granger
+test_granger_dM2_IPC <- causality(var_model, cause = "dIPC")
+test_granger_dM2_PIB <- causality(var_model, cause = "dPIB")
+test_granger_dM2_TCN <- causality(var_model, cause = "dTCN")
+test_granger_dM2_TPM <- causality(var_model, cause = "dTPM")
+
+# Función impulso respuesta
+# Crear los objetos de IRF
+irf_M2 <- irf(var_model, impulse = "dM2", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_IPC <- irf(var_model, impulse = "dIPC", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_PIB <- irf(var_model, impulse = "dPIB", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_TCN <- irf(var_model, impulse = "dTCN", response = "dM2", n.ahead = 12, ortho = TRUE)
+irf_TPM <- irf(var_model, impulse = "dTPM", response = "dM2", n.ahead = 12, ortho = TRUE)
+
+# Descomponer la varianza
+# Ajustar el modelo VAR
+var_model <- VAR(base_com, p = opt, type = "const", exogen = exogen_vars)
+# Descomposición de la varianza
+fevd_results <- fevd(var_model, n.ahead = 12)
+
+# Predicción
+# Crear las variables exógenas para el período de predicción
+forecast_exogen <- tail(exogen_vars, 8)
+
+# Realizar predicciones
+forecast_var <- predict(var_model, n.ahead = 8, dumvar = forecast_exogen)
+
+# Extraer las predicciones para dM2_ts
+forecast_dM2 <- data.frame(
+  tiempo = 1:8,
+  prediccion = forecast_var$fcst$dM2[, 1],
+  inferior = forecast_var$fcst$dM2[, 2],
+  superior = forecast_var$fcst$dM2[, 3]
+)
+
+# Gráfico de Predicción
+ggplot(forecast_dM2, aes(x = tiempo, y = prediccion)) +
+  geom_line(color = "blue") +
+  geom_ribbon(aes(ymin = inferior, ymax = superior), alpha = 0.2, fill = "blue") +
+  labs(title = "Predicción de la Oferta Monetaria M2",
+       x = "Trimestres",
+       y = "Predicción") +
+  theme_minimal()
+
+```
+
+
+
+# Introducción
+
+La oferta monetaria M2 es un componente esencial en el análisis económico, ya que incluye tanto el dinero en circulación como otros depósitos de alta liquidez. La predicción de M2 es fundamental para la formulación de políticas económicas, especialmente en contextos de estabilidad financiera y control de la inflación. Este estudio plantea la pregunta: ¿Cuál será la oferta de dinero M2 en Chile el próximo trimestre basada en las variables macroeconómicas disponibles? La hipótesis es que variables como la tasa de política monetaria, el tipo de cambio nominal, el índice de precios al consumidor (IPC) y el PIB tienen un impacto significativo en la predicción de M2.
+
+Investigaciones previas han mostrado una alta correlación entre la oferta monetaria, el PIB y los niveles de precios. Por ejemplo, Friedman y Schwartz (1963) demostraron que la oferta monetaria está estrechamente relacionada con el PIB y la inflación. Bernanke y Blinder (1992) también subrayaron la importancia de la política monetaria en la determinación de la oferta monetaria.
+
+Para abordar esta pregunta, este estudio incluye variables clave como la tasa de política monetaria, el tipo de cambio nominal, el IPC y el PIB, con el fin de entender cómo influyen en la oferta monetaria y, por ende, en la economía en general. La inclusión de estas variables permite un análisis detallado de los factores que afectan M2 y cómo las políticas monetarias pueden ser ajustadas para alcanzar objetivos económicos específicos.
+\newpage
+
+# Metodología
+
+## Definición del Modelo y Método de Estimación:
+
+Para responder a nuestra pregunta de investigación, utilizamos dos
+enfoques principales: el Modelo Autoregresivo de Retardos Distribuidos
+(ARD) y el Modelo Vector Autoregresivo (VAR). Cada uno de estos modelos
+tiene sus ventajas y consideraciones, utilizando ambos para obtener una
+visión integral de los factores que influyen en la oferta monetaria M2 y
+la capacidad de estos modelos para realizar predicción.
+
+## Modelo Autoregresivo de Retardos Distribuidos (ARD)
+
+El Modelo Autoregresivo de Retardos Distribuidos (ARD) nos permite
+incluir los rezagos de la variable dependiente (M2) y otras variables
+explicativas (IPC, PIB, TCN, TPM), junto con variables dummy para
+eventos específicos y estacionalidad. Este enfoque es útil para capturar
+la dinámica temporal de la serie de tiempo, permitiendo que los valores
+pasados de M2 y otras variables macroeconómicas influyan en los valores
+presentes.
+
+La especificación general del modelo ARD es:
+
+\begin{align*}
+\Delta \log(\text{M2}_t) &= \beta_0 + \beta_1 \Delta \log(\text{M2}_{t-1}) + \beta_2 \Delta \log(\text{IPC}_t) \\
+&\quad + \beta_3 \Delta \log(\text{PIB}_t) + \beta_4 \Delta \log(\text{TCN}_t) + \beta_5 \Delta \log(\text{TPM}_t) \\
+&\quad + \beta_6 \delta_{2008} + \beta_7 \delta_{2010} + \beta_8 \delta_{2020} \\
+&\quad + \beta_9 \delta_{Q1} + \beta_{10} \delta_{Q2} + \beta_{11} \delta_{Q3} + \epsilon
+\end{align*}
+
+
+En este modelo, las variables dummy permiten capturar efectos
+específicos de ciertos eventos históricos y estacionales que podrían
+afectar la oferta monetaria M2. Sin embargo, una de las limitaciones del
+modelo ARD es la posible existencia de endogeneidad, lo que puede sesgar
+las estimaciones y hacer que los resultados sean menos confiables.
+
+En el contexto del modelo ARD, la endogeneidad puede surgir debido a la
+relación simultánea entre las variables macroeconómicas. Por ejemplo,
+cambios en la tasa de política monetaria pueden afectar el PIB y, a su
+vez, el PIB puede influir en la tasa de política monetaria. Esta
+interdependencia no se captura completamente en un modelo ARD, lo que
+puede llevar a problemas de estimación. Por esta razón, complementamos
+nuestro análisis con un modelo VAR, que es más adecuado para manejar la
+endogeneidad.
+
+## Modelo Vector Autoregresivo (VAR)
+
+El Modelo Vector Autoregresivo (VAR) nos permite capturar las
+interrelaciones entre todas las variables macroeconómicas incluidas. En
+un modelo VAR, todas las variables se trataron como endógenas, y cada
+una de ellas se modela como una función de sus propios rezagos y los
+rezagos de las demás variables del sistema.
+
+La forma reducida en notación matricial del sistema VAR(1) es:
+
+$$\mathbf{Z}_t = \mathbf{A} + \mathbf{\Phi} \mathbf{Z}_{t-1} + \mathbf{\epsilon}_t$$
+
+Donde:
+
+-   $\mathbf{Z}_t$ es el vector de las variables endógenas en el tiempo
+    $t$,
+-   $\mathbf{A}$ es el vector de constantes,
+-   $\mathbf{\Phi}$ es la matriz de coeficientes de los rezagos,
+-   $\mathbf{\epsilon}_t$ es el vector de términos de error.
+
+$$
+\begin{pmatrix}
+\log(\text{M2}_t) \\
+\log(\text{IPC}_t) \\
+\log(\text{PIB}_t) \\
+\log(\text{TCN}_t) \\
+\log(\text{TPM}_t)
+\end{pmatrix}
+=
+\begin{pmatrix}
+\alpha_{1} \\
+\alpha_{2} \\
+\alpha_{3} \\
+\alpha_{4} \\
+\alpha_{5}
+\end{pmatrix}
++
+\begin{pmatrix}
+\phi_{11} & \phi_{12} & \phi_{13} & \phi_{14} & \phi_{15} \\
+\phi_{21} & \phi_{22} & \phi_{23} & \phi_{24} & \phi_{25} \\
+\phi_{31} & \phi_{32} & \phi_{33} & \phi_{34} & \phi_{35} \\
+\phi_{41} & \phi_{42} & \phi_{43} & \phi_{44} & \phi_{45} \\
+\phi_{51} & \phi_{52} & \phi_{53} & \phi_{54} & \phi_{55}
+\end{pmatrix}
+\begin{pmatrix}
+\log(\text{M2}_{t-1}) \\
+\log(\text{IPC}_{t-1}) \\
+\log(\text{PIB}_{t-1}) \\
+\log(\text{TCN}_{t-1}) \\
+\log(\text{TPM}_{t-1})
+\end{pmatrix}
++
+\begin{pmatrix}
+\epsilon_{1t} \\
+\epsilon_{2t} \\
+\epsilon_{3t} \\
+\epsilon_{4t} \\
+\epsilon_{5t}
+\end{pmatrix}
+$$
+
+En este modelo, cada ecuación representa una variable endógena y su
+relación con los rezagos de todas las variables del sistema. Esto
+permite capturar la endogeneidad y las interrelaciones dinámicas entre
+las variables macroeconómicas.
+
+El modelo VAR ofrece varias ventajas importantes:
+
+-   **Causalidad de Granger:** Permite evaluar si una variable es útil
+    para predecir otra variable a través del análisis de causalidad de
+    Granger.
+-   **Funciones de Impulso Respuesta:** Permite analizar cómo un choque
+    en una variable afecta a las demás variables en el tiempo.
+-   **Descomposición de la Varianza:** Permite descomponer la
+    variabilidad de cada variable en función de los choques en todas las
+    variables del sistema.
+
+El uso combinado de los modelos ARD y VAR nos permite abordar de manera
+integral la predicción de la oferta monetaria M2, considerando tanto la
+dinámica temporal como las interrelaciones entre las variables
+macroeconómicas, mitigando los problemas de endogeneidad que podrían
+afectar la confiabilidad de los resultados.
+
+## Evaluación de la Endogeneidad
+
+Para evaluar la endogeneidad de las variables en el modelo VAR, es
+importante considerar la teoría económica y cómo cada variable responde
+a los cambios en las demás variables. Basado en la literatura económica,
+podemos organizar las variables de la más endógena a la menos endógena
+de la siguiente manera:
+
+1.  **Oferta Monetaria M2:** Altamente endógena porque responde
+    directamente a las políticas del banco central (TPM) y a cambios en
+    el nivel de precios (IPC), el PIB y el tipo de cambio nominal (TCN).
+2.  **Índice de Precios al Consumidor (IPC):** Altamente endógeno porque
+    se ve afectado por la oferta monetaria (M2) y el tipo de cambio
+    nominal (TCN).
+3.  **Producto Interno Bruto (PIB):** Endógeno porque responde a cambios
+    en la política monetaria (TPM), el nivel de precios (IPC) y la
+    oferta monetaria (M2).
+4.  **Tipo de Cambio Nominal (TCN):** Menor endógeneidad que las
+    variables anteriores, sin embargo, responde a cambios en la política
+    monetaria (TPM) y a los movimientos del PIB y la oferta monetaria
+    (M2).
+5.  **Tasa de Política Monetaria (TPM):** Poca endógeneidad en
+    comparación con las otras variables, ya que es una herramienta de
+    política controlada por el banco central.
+
+Basado en el análisis teórico, la oferta monetaria M2 es la variable más
+endógena, seguida por el IPC, el PIB, el TCN y finalmente la TPM.
+
+# Descripción de los Datos
+Los datos utilizados en este estudio fueron obtenidos de la página del Banco Central de Chile, y comprenden varias variables económicas clave ajustadas a datos trimestrales:
+
+-   **M2:** Oferta monetaria.
+-   **IPC:** Índice de Precios al Consumidor, ajustado a trimestral.
+-   **PIB:** Producto Interno Bruto.
+-   **TCN:** Tipo de Cambio Nominal.
+-   **TPM:** Tasa de Política Monetaria.
+
+Estas variables proporcionan una visión integral de diferentes aspectos de la economía chilena, permitiendo análisis detallados sobre el comportamiento y las interacciones entre políticas monetarias, precios, actividad económica y el mercado cambiario. Por otra parte, las series de tiempo se transformaron a logaritmos y se diferenciaron para asegurar la estacionariedad. Además, se crearon variables dummy para eventos específicos (2008, 2010, 2020) y estacionales (Q1, Q2, Q3).
+
+***Estadísticas Descriptivas:***
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+descriptiva %>% kable() %>%  kable_styling(full_width =F,position = "center",	font_size = 10)
+```
+
+-   La Oferta Monetaria M2 (en miles de millones de pesos) posee una
+    alta variación dada su desviación estándar. Mediana bien alejada de
+    la media, por lo que se asume sesgo por defecto en la distribución.
+
+-   El Índice de Precios al Consumidor IPC posee una media cercana a 0,
+    variaciones dentro de lo normal, a primera vista no existe sesgo
+    dada la naturaleza de la media y la mediana.
+
+-   El Producto Interno Bruto PIB (miles de millones de pesos) posee una
+    distribución menos fluctuante que las anteriores, la media y la
+    mediana se mantienen relativamente parecidas.
+
+-   El Tipo de cambio nominal TCN (dólar observado \$CLP/USD) tiene una
+    variación que ha ido fluctuando con mayores diferencias en los
+    últimos años ya que la mediana es alrededor de 30 pesos más baja que
+    la media. Aparentemente una desviación alta.
+
+-   La Tasa de política monetaria TPM (porcentaje) tiene una media y
+    mediana prácticamente iguales, por no decir la misma, desviación
+    estándar considerable dada la naturaleza de los datos.
+
+# Análisis gráfico
+
+Los gráficos presentados proporcionan una visión integral de la
+transformación de las variables económicas para asegurar la
+estacionariedad, una condición necesaria para la aplicación de modelos
+econométricos. El análisis confirma que, tras la diferenciación, las
+series temporales de M2, IPC, PIB, TCN y TPM se han convertido en
+estacionarias, lo que valida el uso de modelos ARD y VAR en nuestro
+estudio para predecir la oferta monetaria M2. Estos modelos nos permiten
+capturar las dinámicas temporales y las interrelaciones entre las
+variables, ofreciendo una base sólida para el análisis.
+
+## Aplicación de logaritmo
+
+### Logaritmo de las variables
+
+Al tomar los logaritmos de estas variables, buscamos estabilizar la
+varianza y obtener una relación más lineal entre las variables. Los
+logaritmos ayudan a manejar la heterocedasticidad y permiten una mejor
+interpretación de las tasas de crecimiento.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
+# Gráfica con logaritmos estacionariedad
+ggplot(combined_df, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Logaritmo)") +
+  theme_minimal()
+```
+
+Al principio, se observan los logaritmos de las variables con el fin de
+estabilizar la varianza y buscar linealidad entre variables. Es
+plausible encontrar una tendencia, ya sea creciente o decreciente,
+dependiendo de la variable y queda en evidencia la no estacionariedad de
+las series de tiempo.
+
+### Autocorrelación de Logaritmo de las variables
+
+El siguietne gráfico presenta las funciones de autocorrelación (ACF) de
+las series logarítmicas de las variables económicas. La ACF muestra la
+correlación de una variable consigo misma en diferentes rezagos.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico: ACF de las series logarítmicas
+ggplot(acf_combined_df, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Series Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Los gráficos ACF de M2 y PIB, en particular, exhiben un patrón de
+autocorrelación que decrece lentamente, lo que confirma la no
+estacionariedad de estas series, puesto que se refleja en la
+persistencia de la correlación en varios rezagos, sugiriendo que los
+valores actuales están influenciados por valores pasados durante un
+período prolongado.
+
+## Aplicación de diferenciación
+
+Para eliminar la tendencia, se diferencian las variables con el fin
+convertir las series a estacionarias, así se pueden captar relaciones
+significativas entre las variables.
+
+### Diferenciación del Logaritmo de las variables
+
+Al realizar la diferenciación, es posible observar que las tendencias a
+largo plazo ya desaparecieron, ahora cada serie de tiempo fluctúa en
+base a una media constante, se cumple la estacionariedad que tanto se
+buscaba.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
+# Gráfica con diferencia de logaritmos estacionariedad
+ggplot(combined_diff, aes(x = Periodo, y = Valor)) +
+  geom_line() +  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  labs(title = "Diferencias Logaritmo Variables Economicas", x = "Periodo", y = "Valor (Diff Logaritmo)") +
+  theme_minimal()
+```
+
+### Autocorrelación de la Diferenciación del Logaritmo de las variables
+
+Las funciones de autocorrelación de las diferencias logarítmicas
+confirman que las series se han convertido en estacionarias, ya que la
+mayoría de los coeficientes de autocorrelación caen rápidamente a cero,
+y no se observa una correlación significativa en los rezagos más
+lejanos. Esto es crucial, ya que si se va a trabajar con los modelos ARD
+y VAR, es necesario que las series sean estacionarias.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+# Gráfico: ACF de las series logarítmicas diferenciadas
+ggplot(acf_combined_diff, aes(x = Lag, y = ACF)) +
+  geom_segment(aes(xend = Lag, yend = 0), size = 1) +  # Líneas verticales
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(title = "Funciones de Autocorrelación de las Diferencias Logarítmicas",
+       x = "Rezagos (Trimestres)", y = "Función de Autocorrelación") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+# Resultados del Modelo
+
+## Estimación del Modelo ARD:
+
+El modelo ARD se ajustó con el número óptimo de rezagos basado en el
+criterio AIC. Los resultados mostraron que las variables dIPC_ts y
+dPIB_ts tienen un impacto significativo en dM2_ts, con coeficientes
+positivos y significativos, mientras que las demás variables no
+mostraron significancia estadística considerable.
+
+### Evaluación de la Autocorrelación y Heterocedasticidad:
+
+-   Durbin-Watson Test: No se encontró autocorrelación significativa en
+    los residuos.
+-   Breusch-Pagan Test: No se encontró evidencia significativa de
+    heterocedasticidad.
+
+Los resultados del modelo ARD, en resumen, son básicamente todos no
+significativos, menos el PIB, pero una sola variable significativa no es
+suficiente como para quedarse con el modelo, no vale la pena. Esto
+debido a que el modelo probablemente no es lo suficientemente robusto y
+además es poco complejo para analizar la correlación que puede existir
+entre todas las variables estudiadas. Además comentar que el R cuadrado
+arroja un resultado bajísimo de apenas 0.16 aproximadamente.
+
+Lo anterior da pie a que se evalúe un modelo VAR, para capturar la
+complejidad del problema, donde es probable que incluso se tenga que
+realizar una evaluación de causalidad de Granger para saber si las
+variables explican en una dirección o si mantienen una doble implicancia
+entre ellas.
+
+## Estimación del Modelo VAR
+
+El modelo VAR se ajustó con las variables exógenas y el número óptimo de rezagos seleccionado.
+
+Según nuestros resultados, aquellas variables que tienen una causalidad de granger significativa sobre la M2 es principalmente el IPC y la TCN, mientras que los parámetros PIB y TPM mantienen una causalidad de granger no significativa.
+
+Esto no quiere decir que el modelo sea incorrecto, esto lo único que explica es que unas variables mantienen una relación más fuerte para poder predecir la variable en cuestión. Esto se puede deber en base a la naturaleza del modelo, o que existe un valor predictivo, solo que no tan importante versus las otras variables que sí lo son.
+
+Esto incluso en un futuro, podría ayudar a perfeccionar aún más la predicción, sin estar errónea la predicción que ya existe del M2, solo que cabe la posibilidad de que sea menos precisa de lo que se esperaba según el modelo VAR que por defecto si daba resultados significativos.
+
+
+### Funciones de Impulso Respuesta:
+
+Las funciones de impulso respuesta indicaron que un choque en dM2 tiene
+efectos persistentes en sí mismo, mientras que choques en dIPC y dPIB
+también afectan significativamente a dM2 en el tiempo, confirmando la
+importancia de estas variables en la predicción de M2.
+
+
+En el caso de la M2 sobre sí misma, inicialmente muestra una respuesta positiva que se disipa rápidamente en los primeros períodos, concluyendo en una oscilación constante alrededor de la media 0. Estos son choques transitorios.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=4, fig.align='center'}
+plot(irf_M2)
+```
+
+En cuanto a la IPC sobre la M2, se observa un oscilamiento constante respecto a la media 0 desde el inicio, indicando efectos positivos y negativos variables. A partir del noveno período, predomina un impulso mayormente negativo.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=4, fig.align='center'}
+plot(irf_IPC)
+```
+
+Al observar el PIB sobre la M2, en su mayoría se observa un estímulo positivo sin un comportamiento oscilatorio como en los casos anteriores.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=4, fig.align='center'}
+plot(irf_PIB)
+```
+
+En contraste, la TCN tiene efectos casi opuestos sobre la M2, mayormente negativos y sin un patrón oscilatorio claro, con solo dos casos donde superó ligeramente la barrera negativa.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=4, fig.align='center'}
+plot(irf_TCN)
+```
+
+Finalmente, la TPM ejerce un fuerte estímulo positivo en los primeros períodos, aunque no desde el inicio como tal, cambiando abruptamente hacia un comportamiento negativo más equilibrado posteriormente.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=4, fig.align='center'}
+plot(irf_TPM)
+```
+
+### Descomposición de la Varianza:
+
+Las descomposiciones de la varianza, las observamos en las distintas
+variables que se están estudiando, y es una forma de asignarle
+explicación según qué otra variable estudiada, es decir, qué tanto se
+explican entre sí. Lo lógico sería que a medida que pasa el tiempo, lo
+que ocurrió en el primer período, se vaya diluyendo con el tiempo.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=10, fig.align='center'}
+plot(fevd_results)
+```
+
+-  La varianza del M2 es mayormente explicada por sí misma al principio, pero va perdiendo fuerza gradualmente, alcanzando aproximadamente la mitad de su explicación inicial a lo largo de 12 períodos.
+
+-  En cuanto a la varianza de la Tasa Nominal de Cambio, esta se explica en menor medida por sí misma pero se mantiene más constante con el tiempo.
+
+-  La varianza del IPC muestra una fuerte explicación por sí misma, que se mantiene por encima del 50% a largo plazo.
+
+-  Para la varianza de la TPM, se observa alrededor del 80% de explicación al inicio, pero esta proporción se reduce considerablemente con el paso del tiempo.
+
+-  Finalmente, en la varianza del PIB, se puede afirmar que es la que mantiene mayor consistencia a lo largo del tiempo en su explicación.
+
+-  La descomposición de la varianza revela que una parte significativa de la variabilidad en M2 puede atribuirse a los choques en M2 mismo, así como a los choques en IPC y PIB, subrayando la relevancia de estas variables.
+
+-  El modelo VAR nos ha permitido generar la siguiente predicción de la oferta monetaria basada en las variables macroeconómicas incluidas.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=4, fig.height=2, fig.align='center'}
+ggplot(forecast_dM2, aes(x = tiempo, y = prediccion)) +
+  geom_line(color = "blue") +
+  geom_ribbon(aes(ymin = inferior, ymax = superior), alpha = 0.2, fill = "blue") +
+  labs(title = "Predicción de la Oferta Monetaria M2",
+       x = "Trimestres",
+       y = "Predicción") +
+  theme_minimal()
+```
+
+-  Al analizar el gráfico, la línea azul representa la predicción mientras que el área sombreada indica el intervalo de confianza al 95%, que refleja la variabilidad real de la predicción.
+
+-  En los primeros dos trimestres se observa un crecimiento, aunque con valores negativos indicando una posible disminución de la oferta monetaria entre un 1% y un 5%.
+
+-  Desde el tercer trimestre hasta el séptimo, esta tendencia se mantiene constante, alcanzando un pico de casi 6% de aumento, sugiriendo una continuación del crecimiento.
+
+-  A partir del segundo año, específicamente en el octavo trimestre, es probable que se experimente una marcada desaceleración en el crecimiento de la oferta monetaria, lo que podría ser indicativo de un comportamiento cíclico típico de estas variables.
+
+-  El horizonte de 8 trimestres se justifica debido a que más allá de este punto, la incertidumbre aumenta considerablemente. El área sombreada del intervalo de confianza se amplía y podría reflejar más el ruido en los datos, haciendo menos realista cualquier predicción a largo plazo. Se recomienda actualizar la información conforme pase el tiempo y mantener un horizonte de análisis de 8 trimestres para evaluar la persistencia del comportamiento cíclico, especialmente en respuesta a posibles shocks económicos a lo largo del tiempo.
+\newpage
+
+# Conclusión
+
+## Resumen de Resultados:
+
+-  Los resultados obtenidos confirman que las variables IPC y PIB tienen un impacto significativo en la predicción de la oferta monetaria M2. La hipótesis planteada se valida parcialmente, ya que, aunque algunas variables como la Tasa Nominal de Cambio (TCN) y la Tasa de Política Monetaria (TPM) no mostraron significancia estadística, el IPC y el PIB demostraron ser predictivos de M2, al menos a corto plazo.
+
+-  Estos hallazgos están en línea con estudios previos que sugieren que la oferta monetaria está influenciada significativamente por variables económicas como los niveles de precios. La oferta monetaria M2 puede predecirse de manera efectiva utilizando un modelo VAR, y esta predicción puede refinarse con pruebas adicionales, como los análisis de impulso-respuesta y causalidad de Granger. Es esencial considerar si las predicciones son a corto o largo plazo, dependiendo de la relevancia para el tipo de análisis.
+
+-  Es importante destacar los límites de las predicciones a muy largo plazo. Intentar pronosticar más allá de un horizonte razonable puede resultar en la dilución de la influencia de las variables explicativas, disminuyendo la precisión de los resultados obtenidos en los primeros períodos.
+
+-  Respecto a la hipótesis, debe ser aceptada, dado que la predicción en este estudio se limita a un máximo de 8 trimestres (2 años). En este horizonte, las variables de mayor impacto son el IPC y el PIB, como lo sugieren los estudios mencionados. A largo plazo, el PIB va perdiendo fuerza predictiva, mientras que la TCN gana mayor relevancia junto con el IPC. Sin embargo, esta tendencia no es relevante para predicciones a corto plazo.
+
+-  Se recomienda actualizar el modelo VAR con los datos más recientes a medida que estén disponibles. Esta actualización permitirá mantener la fiabilidad de las predicciones para los períodos más cercanos. El uso continuo de un horizonte de predicción de 8 trimestres asegurará que las predicciones sean precisas y útiles para la toma de decisiones económicas a corto plazo.
+
+## Comparación de modelos.
+
+-  Modelo ARD: Este modelo generalmente se utiliza para estudiar la
+relación a largo plazo entre una variable dependiente y otras
+explicativas.
+
+-  Según los resultados, se mostró que no era significativo este modelo,
+revelando la variabilidad de los errores no es constante en el tiempo,
+que directamente afecta los coeficientes estimados.
+
+- Modelo VAR: Este modelo es útil principalmente cuando las variables
+pueden influenciarse mutuamente, en el contexto de variables
+macroeconómicas, esto es más plausible.
+
+-  Según los resultados, la causalidad de Granger indica flujo de
+información desde el IPC, PIB y TCN hacia la M2, sin embargo la TPM no.
+Además la respuesta de M2 a sus propios choques, muestra un efecto
+inicial positivo que se va desvaneciendo con el tiempo.
+
+-  El modelo VAR fue más adecuado para capturar la interrelación entre las
+variables, hay interdependencia significativa entre M2 y las variables
+explicativas escogidas, lo que nos permite realizar predicciones más
+precisas.
+
+# Bibliografia
+
+-   Feldkircher, M., & Tondl, G. (2020). Global factors driving
+    inflation and monetary policy: A global VAR assessment.
+    International Advances in Economic Research, 26(3), 225–247.
+    <https://doi.org/10.1007/s11294-020-09792-2>
+
+-   Informe de Política Monetaria Junio 2024 (LSE) - Rosanna Costa,
+    Presidenta. (s/f). Banco Central de Chile. Recuperado el 3 de julio
+    de 2024, de
+    <https://www.bcentral.cl/es/web/banco-central/contenido/-/details/ipom-junio-2024-lse-rosanna-costa>
